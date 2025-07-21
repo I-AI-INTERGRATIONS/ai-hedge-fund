@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 import json
 from pathlib import Path
 from pydantic import BaseModel
+import os
 
 from app.backend.models.schemas import ErrorResponse
 
@@ -29,9 +30,15 @@ async def save_json_file(request: SaveJsonRequest):
         
         # Construct file path
         file_path = outputs_dir / request.filename
+
+        # Normalize and check that the file path is within outputs_dir
+        file_path_resolved = file_path.resolve()
+        outputs_dir_resolved = outputs_dir.resolve()
+        if not str(file_path_resolved).startswith(str(outputs_dir_resolved)):
+            raise HTTPException(status_code=400, detail="Invalid filename or directory traversal detected.")
         
         # Save JSON data to file
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path_resolved, 'w', encoding='utf-8') as f:
             json.dump(request.data, f, indent=2, ensure_ascii=False)
         
         return {
